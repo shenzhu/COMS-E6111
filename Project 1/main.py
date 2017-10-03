@@ -190,11 +190,13 @@ def indexer(search_results):
 
 def rocchio(invertedList, search_results):
     """
-    Construct index:
+    Rocchio algorithm:
+    Ch09 Relevance feedback and query expansion
     :param invertedList:{'term'}, search_results: [{'title', 'url', 'summary', 'relevant', 'df'},...]
     :ret queryWeights:{'term'}
     """
     
+    # constants
     alpha = 1
     beta = 0.75
     gamma = 0.15

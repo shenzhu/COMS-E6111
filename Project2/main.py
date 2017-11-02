@@ -9,6 +9,13 @@ import os
 class InformationExtractionEngine:
     def __init__(self):
         self.relation_map = {1: "Live_In", 2: "Located_In", 3: "OrgBased_In", 4: "Work_For"}
+        
+        self.entity_map = {1:['PEOPLE', 'LOCATION'], 2:['LOCATION', 'LOCATION'], 3:['ORGANIZATION', 'LOCATION'], 4:['PEOPLE', 'ORGANIZATION']}
+
+        self.queries = set()
+        
+        # (word1, word2) -> (entity1, entity2, relation, prob)
+        self.X = {}
 
         # Parameters from input
         self.SEARCH_JSON_API_KEY = ""
@@ -23,7 +30,7 @@ class InformationExtractionEngine:
 
         # Relations
         # (word1, word2) -> (entity1, entity2, relation, prob)
-        self.relations = {}
+        # self.relations = {}
 
         # Client
         self.client = NLPCoreClient(os.path.abspath("stanford-corenlp-full-2017-06-09"))
@@ -73,10 +80,23 @@ class InformationExtractionEngine:
                     # If max prob over threshold and max relation equals to curr relation, update relations
                     if max_prob > self.THRESHOLD and max_relation == self.relation_map[self.RELATION]:
                         key = (relation.entities[0].value, relation.entities[1].value)
-                        if key not in self.relations:
-                            self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
-                        elif self.relations[key][3] < max_prob:
-                            self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
+                        
+                        # judge the type of inputs
+                        if float(max_prob) >= float(self.THRESHOLD) and self.entity_map[self.RELATION][0] == relation.entities[0].type and self.entity_map[self.RELATION][1] == relation.entities[1].type:
+                            if key not in self.X or float(self.X[key][3]) < float(max_prob):
+                                self.X[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
+                                print "Sentence:",
+                                for token in sentence.tokens:
+                                    print " " + token.word,
+                                print ""
+
+                                print "Relation Type: {0:10}| Confidence: {1:.3f}  | EntityType1: {2:15} | EntityValue1: {3:15}| EntityType2: {4:15}| EntityValue2: {5:15}".format(max_relation, float(max_prob), relation.entities[0].type, relation.entities[0].value, relation.entities[1].type, relation.entities[1].value)
+ 
+                        
+                        # if key not in self.relations:
+                        #     self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
+                        # elif self.relations[key][3] < max_prob:
+                        #     self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
                 except:
                     pass
 
@@ -89,14 +109,14 @@ class InformationExtractionEngine:
         :return:
         """
         web_pages = self.google_search()
-        print "Web Page Retrieved"
+        # print "Web Page Retrieved"
         for page in web_pages:
             entities = self.find_entities(page)
             # print entities
             if self.identity_page(entities):
-                print "Page Identified"
+                # print "Page Identified"
                 self.extract_relation_from_page(page)
-                print "Page Processed"
+                # print "Page Processed"
 
     def identity_page(self, entities):
         """
@@ -140,8 +160,8 @@ class InformationExtractionEngine:
         results = []
 
         # Google search
-        #url = "https://www.googleapis.com/customsearch/v1?key=" + self.SEARCH_JSON_API_KEY + "&cx=" + self.SEARCH_ENGINE_ID + "&q=" + self.QUERY
-        url = "https://www.googleapis.com/customsearch/v1?key=AIzaSyCBoYOaSQJeBhFEUJSOPZm6oz-3jHFd6F8&cx=001048151828420015399:qowor3b58ak&q=bill gates microsoft"
+        url = "https://www.googleapis.com/customsearch/v1?key=" + self.SEARCH_JSON_API_KEY + "&cx=" + self.SEARCH_ENGINE_ID + "&q=" + self.QUERY
+        # url = "https://www.googleapis.com/customsearch/v1?key=AIzaSyCBoYOaSQJeBhFEUJSOPZm6oz-3jHFd6F8&cx=001048151828420015399:qowor3b58ak&q=bill gates microsoft"
         response = requests.get(url)
         search_results = json.loads(response.text)['items']
 
@@ -176,6 +196,7 @@ class InformationExtractionEngine:
         # Break into lines and remove leading and trailing space on each
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        # text = [chunk.decode('unicode_escape').encode('ascii','ignore') + "." for chunk in chunks if chunk]
         text = [chunk.encode('utf-8') + "." for chunk in chunks if chunk]
 
         return text
@@ -212,11 +233,31 @@ class InformationExtractionEngine:
 
     def run(self):
         self.read_parameters()
+        ind = 1
+        while len(self.X) < self.k:
+            print("Iteration " + str(ind) + ": query - " + self.QUERY)
+            self.extract_relation()
+            sorted_X = sorted(self.X.items(), key = lambda (k, v): v[3], reverse = True)
+            print("=====Relations=====")
+            count = 0
+            for t in sorted_X:
+                count += 1
+                if count > self.k:
+                    break
+                print "Relation Type: {0:10}| Confidence: {1:.3f}  | Entity #1: {2:15}| Entity #2: {3:15}".format(self.relation_map[self.RELATION], float(t[1][3]), t[0][0], t[0][1])
+            
+            for t in sorted_X:
+                temp_query = t[0][0] + " " + t[0][1]
+                if not temp_query in self.queries:
+                    self.queries.add(temp_query)
+                    break
+            self.QUERY = temp_query
+            
 
 
 if __name__ == "__main__":
     engine = InformationExtractionEngine()
-    # engine.run()
+    engine.run()
 
     # # Test google_search
     # res = engine.google_search()
@@ -248,8 +289,26 @@ if __name__ == "__main__":
     # print type(text[0])
 
     # Test extract_relation
-    engine.RELATION = 2
-    engine.THRESHOLD = 0
-    engine.extract_relation()
-    for key in engine.relations:
-        print key, engine.relations[key]
+    # engine.RELATION = 4
+    # engine.THRESHOLD = 0
+    # engine.extract_relation()
+    # for key in engine.relations:
+    #     print key, engine.relations[key]
+
+
+    # rel_map = {1:['PEOPLE', 'LOCATION'], 2:['LOCATION', 'LOCATION'], 3:['ORGANIZATION', 'LOCATION'], 4:['PEOPLE', 'ORGANIZATION']}
+    # for key in engine.relations:
+    #     if engine.relations[key][0] == rel_map[engine.RELATION][0] and engine.relations[key][1] == rel_map[engine.RELATION][1]:
+    #         engine.X[key] = engine.relations[key]
+    #         print (key, engine.relations[key])
+
+
+    # ind = 1
+    # while len(engine.X) < engine.k:
+    #     print("Iteration " + ind + ": query - " + engine.QUERY)
+    #     engine.extract_relation()
+    #     sorted_X = sorted(X.items(), key = lambda (k, v): v[3], reverse = True)
+    #     print("======== Relations =========")
+    #     for t in sorted_X:
+    #         print "Relation Type: {0:10}| Confidence: {1:.3f}   | Entity #1: {2:10}| Entity #2: {3:10}".format("lol", t[1][3], t[0][0], t[0][1])
+    #     engine.QUERY = engine.new_query(sorted_X)

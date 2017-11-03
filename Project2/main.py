@@ -29,10 +29,6 @@ class InformationExtractionEngine:
         # Retrieved set
         self.retrieved_url = set()
 
-        # Relations
-        # (word1, word2) -> (entity1, entity2, relation, prob)
-        # self.relations = {}
-
         # Client
         self.client = NLPCoreClient(os.path.abspath("stanford-corenlp-full-2017-06-09"))
 
@@ -92,12 +88,6 @@ class InformationExtractionEngine:
                                 print ""
 
                                 print "Relation Type: {0:10}| Confidence: {1:.3f}  | EntityType1: {2:15} | EntityValue1: {3:15} | EntityType2: {4:15} | EntityValue2: {5:15}".format(max_relation, float(max_prob), relation.entities[0].type, relation.entities[0].value, relation.entities[1].type, relation.entities[1].value)
- 
-                        
-                        # if key not in self.relations:
-                        #     self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
-                        # elif self.relations[key][3] < max_prob:
-                        #     self.relations[key] = (relation.entities[0].type, relation.entities[1].type, max_relation, max_prob)
                 except:
                     pass
 
@@ -162,7 +152,6 @@ class InformationExtractionEngine:
 
         # Google search
         url = "https://www.googleapis.com/customsearch/v1?key=" + self.SEARCH_JSON_API_KEY + "&cx=" + self.SEARCH_ENGINE_ID + "&q=" + self.QUERY
-        # url = "https://www.googleapis.com/customsearch/v1?key=AIzaSyCBoYOaSQJeBhFEUJSOPZm6oz-3jHFd6F8&cx=001048151828420015399:qowor3b58ak&q=bill gates microsoft"
         response = requests.get(url)
         search_results = json.loads(response.text)['items']
 
@@ -257,6 +246,12 @@ class InformationExtractionEngine:
                 if not temp_query in self.queries:
                     self.queries.add(temp_query)
                     break
+
+            # Check if enters infinite loop
+            if self.QUERY == temp_query:
+                sys.stderr.write(
+                    """Can not find enough relation instances, program ends. Please try another set of parameters.\n""")
+                sys.exit(1)
             self.QUERY = temp_query
             ind += 1
             
@@ -265,57 +260,3 @@ class InformationExtractionEngine:
 if __name__ == "__main__":
     engine = InformationExtractionEngine()
     engine.run()
-
-    # # Test google_search
-    # res = engine.google_search()
-    # print res
-
-    # # Test extract_text_from_page
-    # text = engine.extract_text_from_page("https://news.microsoft.com/exec/bill-gates/")
-    # print text
-
-    # # Test find_entities
-    # text = ["Bill Gates works at Microsoft.", "Sergei works at Google."]
-    # entities = engine.find_entities(text)
-    # # print entities
-    #
-    # # Test identify_page
-    # entities.append('LOCATION')
-    # entities.append('LOCATION')
-    # engine.RELATION = 4
-    # print engine.identity_page(entities)
-
-    # # Test relation_extraction_from_webpage
-    # engine.RELATION = 4
-    # engine.THRESHOLD = 0
-    # text = ["Bill Gates works at Microsoft.", "Sergei works at Google."]
-    # engine.extract_relation_from_page(text)
-    # for key in engine.relations:
-    #     print key, engine.relations[key]
-    # print type(text)
-    # print type(text[0])
-
-    # Test extract_relation
-    # engine.RELATION = 4
-    # engine.THRESHOLD = 0
-    # engine.extract_relation()
-    # for key in engine.relations:
-    #     print key, engine.relations[key]
-
-
-    # rel_map = {1:['PEOPLE', 'LOCATION'], 2:['LOCATION', 'LOCATION'], 3:['ORGANIZATION', 'LOCATION'], 4:['PEOPLE', 'ORGANIZATION']}
-    # for key in engine.relations:
-    #     if engine.relations[key][0] == rel_map[engine.RELATION][0] and engine.relations[key][1] == rel_map[engine.RELATION][1]:
-    #         engine.X[key] = engine.relations[key]
-    #         print (key, engine.relations[key])
-
-
-    # ind = 1
-    # while len(engine.X) < engine.k:
-    #     print("Iteration " + ind + ": query - " + engine.QUERY)
-    #     engine.extract_relation()
-    #     sorted_X = sorted(X.items(), key = lambda (k, v): v[3], reverse = True)
-    #     print("======== Relations =========")
-    #     for t in sorted_X:
-    #         print "Relation Type: {0:10}| Confidence: {1:.3f}   | Entity #1: {2:10}| Entity #2: {3:10}".format("lol", t[1][3], t[0][0], t[0][1])
-    #     engine.QUERY = engine.new_query(sorted_X)

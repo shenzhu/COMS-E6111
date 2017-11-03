@@ -4,6 +4,7 @@ import sys
 from bs4 import BeautifulSoup
 from NLPCore import NLPCoreClient
 import os
+import re
 
 
 class InformationExtractionEngine:
@@ -90,7 +91,7 @@ class InformationExtractionEngine:
                                     print " " + token.word,
                                 print ""
 
-                                print "Relation Type: {0:10}| Confidence: {1:.3f}  | EntityType1: {2:15} | EntityValue1: {3:15}| EntityType2: {4:15}| EntityValue2: {5:15}".format(max_relation, float(max_prob), relation.entities[0].type, relation.entities[0].value, relation.entities[1].type, relation.entities[1].value)
+                                print "Relation Type: {0:10}| Confidence: {1:.3f}  | EntityType1: {2:15} | EntityValue1: {3:15} | EntityType2: {4:15} | EntityValue2: {5:15}".format(max_relation, float(max_prob), relation.entities[0].type, relation.entities[0].value, relation.entities[1].type, relation.entities[1].value)
  
                         
                         # if key not in self.relations:
@@ -199,7 +200,12 @@ class InformationExtractionEngine:
         # text = [chunk.decode('unicode_escape').encode('ascii','ignore') + "." for chunk in chunks if chunk]
         text = [chunk.encode('utf-8') + "." for chunk in chunks if chunk]
 
-        return text
+        sentences = []
+        for t in text:
+            sentences.extend( re.split(r' *[\.\?!][\'"\)\]]* *', t))
+        results = [sentence + "." for sentence in sentences]
+        
+        return results
 
     def read_parameters(self):
         """
@@ -252,6 +258,7 @@ class InformationExtractionEngine:
                     self.queries.add(temp_query)
                     break
             self.QUERY = temp_query
+            ind += 1
             
 
 

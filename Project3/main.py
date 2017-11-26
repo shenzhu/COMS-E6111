@@ -12,7 +12,7 @@ FILE_NAME = 'test.csv'
 def read_parameters():
     inputs = sys.argv
 
-    global FILE_NAME, MIN_SUP, MIN_CONF, MIN_SUP_VAL
+    global FILE_NAME, MIN_SUP, MIN_CONF
     FILE_NAME = inputs[1]
     MIN_SUP = float(inputs[2])
     MIN_CONF = float(inputs[3])

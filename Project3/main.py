@@ -1,12 +1,13 @@
 import sys
 import csv
 from itertools import combinations
+import sys
 
 # Global Variables
-MIN_SUP = 0.01
-MIN_CONF = 0.5
-# FILE_NAME = 'INTEGRATED-DATASET.csv'
-FILE_NAME = 'test.csv'
+MIN_SUP = 0.0
+MIN_CONF = 0.0
+FILE_NAME = ''
+
 
 def read_parameters():
     inputs = sys.argv
@@ -116,23 +117,20 @@ def get_transactions():
             transactions.append(set(row[0].split(',')))
     return transactions
 
-
 def main():
-    # read_parameters()
+    read_parameters()
     trans = get_transactions()
     itemsets, rules = apriori(trans)
 
     n = len(trans)
-    print "==Frequent itemsets (min_sup=" + str(MIN_SUP * 100) + "%)"
-    for k,v in itemsets.iteritems():
-        print k,
-        print str(v * 100 / n) + "%"
-    print "==High-confidence association rules (min_conf=" + str(MIN_CONF*100) + "%)"
-    for k, v in rules.iteritems():
-        print k[0],
-        print " => ",
-        print k[1],
-        print "(Conf: "+ str(v*100) + "%, Supp:" + str(itemsets[k[0]] * 100 / n) + "%)"
+    with open('example-run.txt', 'w') as file:
+        file.write("==Frequent itemsets (min_sup=" + str(MIN_SUP * 100) + "%)" + "\n")
+        for k,v in itemsets.iteritems():
+            file.write(str(k) + " " + str(v * 100 / n) + "%" + "\n")
+        file.write("==High-confidence association rules (min_conf=" + str(MIN_CONF*100) + "%)" + "\n")
+        for k, v in rules.iteritems():
+            file.write(str(k[0]) + " => " + str(k[1]) + " (Conf: "+ str(v*100) + "%, Supp:" + str(itemsets[k[0]] * 100 / n) + "%)" + "\n")
+
 
 if __name__ == '__main__':
 	main()

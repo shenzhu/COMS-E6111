@@ -1,10 +1,9 @@
 import sys
 import csv
-from itertools import chain, combinations
+from itertools import combinations
 
 # Global Variables
 MIN_SUP = 0.01
-MIN_SUP_VAL = 0
 MIN_CONF = 0.5
 # FILE_NAME = 'INTEGRATED-DATASET.csv'
 FILE_NAME = 'test.csv'
@@ -20,12 +19,6 @@ def read_parameters():
     # Print to console
     print "min_sup: " + str(MIN_SUP)
     print "min_conf: " + str(MIN_CONF)
-    
-def subsets(arr):
-    """ 
-    Returns non empty subsets of arr
-    """
-    return chain(*[combinations(arr, i + 1) for i, a in enumerate(arr)])
 
 def apriori_gen(L_prev):
     """
@@ -43,6 +36,9 @@ def apriori_gen(L_prev):
     return Ck
 
 def get_supports(L1, itemsets, transactions):
+    """
+    get supports that larger than MIN_SUP
+    """
     L_prev = L1
     L = L1
     while len(L_prev) > 0:
@@ -69,9 +65,9 @@ def get_confidence(itemsets):
     """
     rules = {}
     for k, v in itemsets.iteritems():
-        for x in subsets(list(k)):
-            if len(x) < len(k):
-                conf = v/float(itemsets[x])
+        if len(k) > 1:
+            for x in combinations(k, len(k)-1):
+                conf = v / float(itemsets[x])
                 if conf >= MIN_CONF:
                     rules[ (x, tuple(set(x) ^ set(k)))] = conf
     return rules
@@ -125,7 +121,18 @@ def main():
     # read_parameters()
     trans = get_transactions()
     itemsets, rules = apriori(trans)
-    print rules
+
+    n = len(trans)
+    print "==Frequent itemsets (min_sup=" + str(MIN_SUP * 100) + "%)"
+    for k,v in itemsets.iteritems():
+        print k,
+        print str(v * 100 / n) + "%"
+    print "==High-confidence association rules (min_conf=" + str(MIN_CONF*100) + "%)"
+    for k, v in rules.iteritems():
+        print k[0],
+        print " => ",
+        print k[1],
+        print "(Conf: "+ str(v*100) + "%, Supp:" + str(itemsets[k[0]] * 100 / n) + "%)"
 
 if __name__ == '__main__':
 	main()
